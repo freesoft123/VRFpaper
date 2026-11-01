@@ -32,13 +32,13 @@ Two kinematic-model categories are considered:
 
 ## 2D and 3D Scenarios
 
-| Rectangular enclosure (2D) | Hexagonal enclosure (2D) |
-| --- | --- |
-| ![Rectangular 2D scenario](outputs/fig_rect_sim_scene.png) | ![Hexagonal 2D scenario](outputs/fig_hexagon_sim_scene.png) |
+| Rectangular enclosure (2D)                                                     | Hexagonal enclosure (2D)                                                        |
+|--------------------------------------------------------------------------------|---------------------------------------------------------------------------------|
+| <img src="./simulation/outputs/2D_and_3D_Scenarios/fig_rect_sim_scene.png" alt="Rectangular 2D scenario" width="520"> | <img src="./simulation/outputs/2D_and_3D_Scenarios/fig_hexagon_sim_scene.png" alt="Hexagonal 2D scenario" width="520"> |
 
-| Cuboid enclosure (3D) | Hexagonal-frustum enclosure (3D) |
-| --- | --- |
-| ![Cuboid 3D scenario](outputs/fig13_cuboid_3d_scene.png) | ![Hexagonal-frustum 3D scenario](outputs/fig14_hex_frustum_3d_scene.png) |
+| Cuboid enclosure (3D)                                                      | Hexagonal-frustum enclosure (3D)                                                           |
+|----------------------------------------------------------------------------|--------------------------------------------------------------------------------------------|
+| <img src="./simulation/outputs/2D_and_3D_Scenarios/fig_cuboid_3d_scene.png" alt="Cuboid 3D scenario" width="520"> | <img src="./simulation/outputs/2D_and_3D_Scenarios/fig_hex_frustum_3d_scene.png" alt="Hexagonal-frustum 3D scenario" width="520"> |
 
 ### Single-Start Escape Animations at a 5 m Opening
 
