@@ -48,11 +48,11 @@ models for the same scenario and start position.
 
 | Rectangular enclosure (2D) | Hexagonal enclosure (2D) |
 | --- | --- |
-| ![Rectangular 5 m escape animation](simulation_bicycle/outputs/escape_animations/rect_5m_holonomic_vs_bicycle.gif) | ![Hexagonal 5 m escape animation](simulation_bicycle/outputs/escape_animations/hex_5m_holonomic_vs_bicycle.gif) |
+| <img src="./simulation/outputs/escape_animations/rect_5m_holonomic_vs_bicycle.gif" alt="Rectangular 5 m escape animation" width="520"> | <img src="./simulation/outputs/escape_animations/hex_5m_holonomic_vs_bicycle.gif" alt="Hexagonal 5 m escape animation" width="520"> |
 
 | Cuboid enclosure (3D) | Hexagonal-frustum enclosure (3D) |
 | --- | --- |
-| ![Cuboid 5 m escape animation](simulation_bicycle/outputs/escape_animations/cuboid_5m_holonomic_vs_3d_ypn.gif) | ![Hexagonal-frustum 5 m escape animation](simulation_bicycle/outputs/escape_animations/hex_frustum_5m_holonomic_vs_3d_ypn.gif) |
+| <img src="./simulation/outputs/escape_animations/cuboid_5m_holonomic_vs_3d_ypn.gif" alt="Cuboid 5 m escape animation" width="520"> | <img src="./simulation/outputs/escape_animations/hex_frustum_5m_holonomic_vs_3d_ypn.gif" alt="Hexagonal-frustum 5 m escape animation" width="520"> |
 
 ## Experimental Setup
 
@@ -108,17 +108,33 @@ Results obtained by VRF-APF are summarized below:
 ## Repository Structure
 
 ```text
-APF_Paper/  
-|-- simulation_bicycle/
-|   |-- vector_repulsion.py                   # Core VRF-APF force model
-|   |-- bicycle_2d.py                         # 2D kinematics and geometry
-|   |-- five_methods_goal_sim.py              # Batch simulation of five 2D planners
-|   |-- three_d_five_methods_goal_sim.py      # Batch simulation of five 3D planners
+VRFpaper/
+|-- simulation/
+|   |-- bicycle_2d.py                        # 2D kinematics and VRF/SOPC/RV/DIT methods
+|   |-- bicycle_2d_4methods.py               # DIT-APF parameters and adaptive terms
+|   |-- cuboid_geometry.py                   # 3D cuboid geometry
+|   |-- hex_frustum_geometry.py              # 3D hexagonal-frustum geometry
+|   |-- methods3d.py                         # 3D SOPC-APF and RV-APF force models
+|   |-- five_methods_goal_sim.py             # Appendix A simulation
+|   |-- three_d_five_methods_goal_sim.py     # Appendix B simulation
+|   |-- data/
+|   |   |-- appendix_a_rect_starts.json
+|   |   |-- appendix_a_hex_starts.json
+|   |   `-- appendix_b_hex_frustum_starts.json
 |   `-- outputs/
-|       |-- five_methods_goals_all_gaps/
-|       |-- three_d_five_methods/
-|       `-- escape_animations/                 # GIFs for five-metric comparisons
-`-- README.md
+|       |-- appendix_a/
+|       |   |-- five_methods_goals_results.json
+|       |   `-- five_methods_goals_results.csv
+|       |-- appendix_b/
+|       |   `-- three_d_five_methods_results.json
+|       `-- escape_animations/
+|           |-- rect_5m_holonomic_vs_bicycle.gif
+|           |-- hex_5m_holonomic_vs_bicycle.gif
+|           |-- cuboid_5m_holonomic_vs_3d_ypn.gif
+|           `-- hex_frustum_5m_holonomic_vs_3d_ypn.gif
+|-- requirements.txt
+|-- README.md
+`-- .gitignore
 ```
 
 ## Environment and Installation
@@ -129,10 +145,7 @@ Python 3.9 or later is recommended.
 python3 -m venv .venv
 source .venv/bin/activate
 
-pip install numpy==2.0.2
-pip install matplotlib==3.9.4
-pip install scipy==1.13.1
-pip install python-docx==1.2.0 lxml==6.1.3
+python -m pip install -r requirements.txt
 ```
 
 ## Usage
@@ -140,28 +153,28 @@ pip install python-docx==1.2.0 lxml==6.1.3
 ### Five planners, five targets, and four opening widths in 2D
 
 ```bash
-python3 simulation_bicycle/five_methods_goal_sim.py \
-  --outdir simulation_bicycle/outputs/five_methods_goals_all_gaps
+python3 simulation/five_methods_goal_sim.py \
+  --outdir simulation/outputs/five_methods_goals_all_gaps
 ```
 
 ### Five planners, five targets, and four opening widths in 3D
 
 ```bash
-python3 simulation_bicycle/three_d_five_methods_goal_sim.py \
-  --outdir simulation_bicycle/outputs/three_d_five_methods
+python3 simulation/three_d_five_methods_goal_sim.py \
+  --outdir simulation/outputs/three_d_five_methods
 ```
 
-The current 3D script loads part of its scene data from local paths. Before running it on another
-machine, update the `PROJECT` and `WORK` path variables in
-`simulation_bicycle/three_d_five_methods_goal_sim.py`.
+All Python modules required by the 3D simulations are included under
+`simulation/`; scene and random-start data required by those modules are stored under
+`simulation/outputs/`.
 
 ## Data
 
 The primary raw data files are:
 
-- `simulation_bicycle/outputs/five_methods_goals_all_gaps/five_methods_goals_results.json`
-- `simulation_bicycle/outputs/five_methods_goals_all_gaps/five_methods_goals_results.csv`
-- `simulation_bicycle/outputs/three_d_five_methods/three_d_five_methods_results.json`
+- `simulation/outputs/five_methods_goals_all_gaps/five_methods_goals_results.json`
+- `simulation/outputs/five_methods_goals_all_gaps/five_methods_goals_results.csv`
+- `simulation/outputs/three_d_five_methods/three_d_five_methods_results.json`
 
 Each JSON file stores both the per-run simulation records and the aggregate statistics grouped by
 geometry, target, planner, and kinematic model. The 2D and 3D experiments each contain 40,000 runs,
@@ -169,7 +182,7 @@ giving 80,000 runs in total.
 
 ## References
 
-[1] C.L. Zhang. Application of A Novel Virtual Force Algorithm for Path Planning[J]. 2026,100854.
+[1] C.L. Zhang, Application of A Novel Virtual Force Algorithm for Path Planning[J]. 2026,100854.
 
 If you use the method, code, or data in this repository, please cite the corresponding manuscript
 and dataset record.
