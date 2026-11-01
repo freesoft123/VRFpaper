@@ -1,18 +1,23 @@
 # -*- coding: utf-8 -*-
-"""二维运动学及附录 A/B 所用的二维逃逸方法。
+"""Two-dimensional kinematics and escape planners used in Appendices A and B.
 
-运动学模型取自论文文献[11]（Kilic et al.）的 BabyRobot（pathplanner.py）：
-  状态 pos/theta(航向)/v/psi(速度方向)/wheel_angle(转向角)；
-  约束 speed_max/min、acc_max/brake_max、wheel_angle_max、wheel_acc_max；
-  更新  v += acc_engine*dt（限幅）；psi += (v/L)*tan(delta)*dt；pos += v*[cos psi, sin psi]*dt。
-合力 F 作为期望加速度方向 a = F/|F| 输入。
+The kinematic model follows the simplified bicycle model used by BabyRobot
+(pathplanner.py) in reference [11] (Kilic et al.):
+  state: pos, theta (body heading), v (scalar speed), psi (velocity direction),
+         and wheel_angle (front steering angle);
+  constraints: speed_max/min, acc_max/brake_max, wheel_angle_max, and wheel_acc_max;
+  update: v += acc_engine*dt (saturated); psi += (v/L)*tan(delta)*dt;
+          pos += v*[cos(psi), sin(psi)]*dt.
+The resultant force F is interpreted as the desired acceleration direction,
+a = F/|F|.
 
-参数（本实验）：机器人尺寸 L = 0.1 m（轮距）、dt = 0.1 s、speed_max = 1.0 m/s、
-speed_min = -1.0、acc_max = brake_max = 1.0、wheel_angle_max = pi/4、wheel_acc_max = 2pi；
-碰撞：机器人中心到墙面的最小距离 < 0.5 m 视为碰撞。
+Experimental parameters: robot dimension L = 0.1 m (wheelbase), dt = 0.1 s,
+speed_max = 1.0 m/s, speed_min = -1.0, acc_max = brake_max = 1.0,
+wheel_angle_max = pi/4, and wheel_acc_max = 2pi. A collision is registered
+when the minimum distance from the robot center to a wall is below 0.5 m.
 
-本模块同时包含 SOPC-APF、RV-APF、DIT-APF 和 VRF-APF 的逐步计算函数，
-避免为单个二维方法维护额外模块。
+This module also provides the stepwise force routines for SOPC-APF, RV-APF,
+DIT-APF, and VRF-APF, avoiding separate modules for individual 2D planners.
 """
 import os
 import sys
@@ -53,7 +58,7 @@ DEFAULT9 = dict(
 )
 
 
-# ---------------- 几何与通用工具 ----------------
+# ---------------- Geometry and common utilities ----------------
 def u_enclosure(length=20.0, width=10.0, gap_width=None, closed_side="far",
                 spacing=0.5):
     """Build the rectangular U-enclosure and sampled wall obstacles."""
@@ -253,7 +258,7 @@ def gap_waypoint(position, obstacles, config):
         return None
     return position + radius * unit(midpoint)
 
-# ---------------- 简化自行车运动学 ----------------
+# ---------------- Simplified bicycle kinematics ----------------
 def _wrap(a):
     return (a + np.pi) % (2 * np.pi) - np.pi
 
@@ -265,9 +270,9 @@ class Bicycle:
         self.pos = np.array(pos, float)
         self.L = L
         self.dt = dt
-        self.theta = theta          # 车体航向
-        self.v = 0.0                # 速度标量
-        self.psi = theta            # 速度方向
+        self.theta = theta          # body heading
+        self.v = 0.0                # scalar speed
+        self.psi = theta            # velocity direction
         self.wheel_angle = 0.0
         self.wheel_desired = 0.0
         self.wheel_acc = 0.0
@@ -277,37 +282,37 @@ class Bicycle:
         self.wheel_angle_max, self.wheel_acc_max = wheel_angle_max, wheel_acc_max
 
     def step(self, F):
-        # 输入合力 F，按简化自行车模型更新速度、前轮转角、航向和位置
-        n = np.linalg.norm(F)                  # 合力幅值
-        if n < 1e-12:                          # 合力近似为零
-            self.acc_engine = 0.0              # 不施加驱动/制动加速度
-            return                             # 保持当前速度、转向角和位置不变
-        a = F / n                              # 单位期望加速度方向
-        th_d = np.arctan2(a[1], a[0])          # 由合力方向得到期望航向角
-        turn = _wrap(th_d - self.theta)        # 期望航向与当前航向的夹角，归一化到 [-π, π]
-        if self.v < 0:                         # 若机器人当前处于倒车状态
-            turn = -turn                       # 倒车时转向符号取反
-        engine_push = n                        # 以合力幅值作为期望驱动加速度（文献[11] feed_kinematic）
-        if abs(turn) > np.pi / 2:              # 期望方向位于车体后方
-            engine_push = -engine_push         # 目标在车后方 → 改为倒车
+        # Update speed, steering angle, heading, and position using the simplified bicycle model.
+        n = np.linalg.norm(F)                  # resultant-force magnitude
+        if n < 1e-12:                          # negligible resultant force
+            self.acc_engine = 0.0              # no drive or braking acceleration
+            return                             # preserve speed, steering, and position
+        a = F / n                              # unit desired acceleration direction
+        th_d = np.arctan2(a[1], a[0])          # desired heading from the force direction
+        turn = _wrap(th_d - self.theta)        # desired heading error normalized to [-pi, pi]
+        if self.v < 0:                         # reverse-motion state
+            turn = -turn                       # reverse the steering sign while reversing
+        engine_push = n                        # force magnitude used as desired drive acceleration
+        if abs(turn) > np.pi / 2:              # desired direction lies behind the body
+            engine_push = -engine_push         # command reverse motion
         self.wheel_desired = float(np.clip(turn, -self.wheel_angle_max, self.wheel_angle_max))
-        # 期望前轮转角等于航向误差，并限制在最大转向角以内
+        # Set the desired front steering angle from the heading error and saturate it.
         need = _wrap(self.wheel_desired - self.wheel_angle) / self.dt
-        # 由当前前轮转角到期望前轮转角所需的转向角速度
+        # Compute the steering angular rate required to reach the desired angle.
         self.wheel_acc = float(np.clip(need, -self.wheel_acc_max, self.wheel_acc_max))
-        # 对转向角速度做最大转向加速度限幅
+        # Saturate the steering angular rate.
         self.wheel_angle = float(np.clip(self.wheel_angle + self.wheel_acc * self.dt,
                                          -self.wheel_angle_max, self.wheel_angle_max))
-        # 按转向角速度积分更新前轮转角，并再次做最大转角限幅
+        # Integrate the front steering angle and apply the steering limit.
         self.acc_engine = float(np.clip(engine_push, -self.brake_max, self.acc_max))
-        # 对驱动/制动加速度做限幅
+        # Saturate the drive and braking acceleration.
         self.v = float(np.clip(self.v + self.acc_engine * self.dt, self.speed_min, self.speed_max))
-        # 对速度积分更新，并限制在最小/最大速度之间
+        # Integrate speed and enforce the minimum and maximum speed limits.
         self.psi = _wrap(self.psi + (self.v / self.L) * np.tan(self.wheel_angle) * self.dt)
-        # 简化自行车模型：速度方向角按 v/L·tan(δ) 更新
-        self.theta = self.psi                  # 简化模型下车体航向与速度方向一致
+        # Update the velocity direction according to v/L*tan(delta).
+        self.theta = self.psi                  # body heading coincides with velocity direction
         self.pos = self.pos + self.v * np.array([np.cos(self.psi), np.sin(self.psi)]) * self.dt
-        # 沿速度方向积分，更新机器人位置
+        # Integrate the robot position along the velocity direction.
 
 
 def crosses(p, q, g1, g2):
@@ -326,7 +331,7 @@ def crosses(p, q, g1, g2):
     return None
 
 
-# ---------------- 三种方法的逐步力 ----------------
+# ---------------- Stepwise force computation for the compared planners ----------------
 def force_proposed(pos, obs, lam):
     d = pos - obs
     r = np.maximum(np.linalg.norm(d, axis=1), 1e-9)
